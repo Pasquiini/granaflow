@@ -1,1 +1,13 @@
-/* You can add global styles to this file, and also import other style files */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Tema GranaFlow */
+:root {
+  --brand-primary: #0D9488;
+  --brand-positive: #10B981;
+  --brand-bg: #F0FDF4;
+  --brand-text: #1E293B;
+  --brand-muted: #64748B;
+}
+body { @apply bg-brand-bg text-brand-text; }
