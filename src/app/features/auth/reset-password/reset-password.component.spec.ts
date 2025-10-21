@@ -1,18 +1,18 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { AuthCallbackComponent } from './auth-callback.component';
+import { ResetPasswordComponent } from './reset-password.component';
 
-describe('AuthCallbackComponent', () => {
-  let component: AuthCallbackComponent;
-  let fixture: ComponentFixture<AuthCallbackComponent>;
+describe('ResetPasswordComponent', () => {
+  let component: ResetPasswordComponent;
+  let fixture: ComponentFixture<ResetPasswordComponent>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [AuthCallbackComponent]
+      imports: [ResetPasswordComponent]
     })
     .compileComponents();
 
-    fixture = TestBed.createComponent(AuthCallbackComponent);
+    fixture = TestBed.createComponent(ResetPasswordComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });

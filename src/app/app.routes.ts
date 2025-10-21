@@ -2,6 +2,8 @@ import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
 import { PageShellComponent } from './shared/components/page-shell/page-shell.component';
 import { PlanGuard } from './core/guards/plan.guard';
+import { ForgotPasswordComponent } from './features/auth/forgot-password/forgot-password.component';
+import { ResetPasswordComponent } from './features/auth/reset-password/reset-password.component';
 
 export const routes: Routes = [
   // 1️⃣ Landing Page pública
@@ -15,7 +17,8 @@ export const routes: Routes = [
   { path: 'pricing', loadComponent: () => import('./features/public/pricing-page/pricing-page.component').then(m => m.PricingPageComponent) },
   { path: 'privacy', loadComponent: () => import('./features/public/privacy-page/privacy-page.component').then(m => m.PrivacyPageComponent) },
   { path: 'terms', loadComponent: () => import('./features/public/terms-page/terms-page.component').then(m => m.TermsPageComponent) },
-  // 2️⃣ Auth públicas
+  { path: 'forgot-password', component: ForgotPasswordComponent },
+  { path: 'reset-password', component: ResetPasswordComponent },
   {
     path: 'login',
     loadComponent: () =>
@@ -25,12 +28,6 @@ export const routes: Routes = [
     path: 'register',
     loadComponent: () =>
       import('./features/auth/register/register.component').then((m) => m.RegisterComponent),
-  },
-  {
-    path: 'auth/callback',
-    loadComponent: () =>
-      import('./features/auth/auth-callback/auth-callback.component')
-        .then(m => m.AuthCallbackComponent),
   },
   // 3️⃣ Área logada — com layout (Navbar + Sidebar)
   {

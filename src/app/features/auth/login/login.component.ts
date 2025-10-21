@@ -183,7 +183,7 @@ export class LoginComponent implements OnInit {
 
   goToReset() {
     // Ajuste a rota se você tiver uma página própria de reset
-    this.router.navigate(['/reset-password'], { queryParams: { email: this.email || undefined } });
+    this.router.navigate(['/forgot-password'], { queryParams: { email: this.email || undefined } });
   }
 
   async submit() {
