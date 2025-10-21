@@ -26,7 +26,7 @@ export class ResetPasswordComponent implements OnInit {
 
   async ngOnInit() {
     try {
-      const { error } = await this.sb.exchangeCodeFromUrl(window.location.href);
+      const { error } = await this.sb.handleRecoveryFromUrl(window.location.href);
       if (error) throw error;
 
       this.form = this.fb.group(
