@@ -26,7 +26,12 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./features/auth/register/register.component').then((m) => m.RegisterComponent),
   },
-
+  {
+    path: 'auth/callback',
+    loadComponent: () =>
+      import('./features/auth/auth-callback/auth-callback.component')
+        .then(m => m.AuthCallbackComponent),
+  },
   // 3️⃣ Área logada — com layout (Navbar + Sidebar)
   {
     path: '',

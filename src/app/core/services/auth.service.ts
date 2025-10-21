@@ -35,14 +35,25 @@ export class AuthService {
     return data.session;
   }
 
-  async signUp(email: string, password: string, fullName?: string) {
-    const { data, error } = await this.supa.client.auth.signUp({
-      email, password,
-      options: { data: { full_name: fullName ?? null } },
-    });
-    if (error) throw error;
-    return data.user;
-  }
+async signUp(email: string, password: string, fullName?: string) {
+  const redirectTo = `${window.location.origin}/auth/callback`;
+
+  const { data, error } = await this.supa.client.auth.signUp({
+    email,
+    password,
+    options: {
+      data: { full_name: fullName ?? null },
+      emailRedirectTo: redirectTo, // 🔹 URL de redirecionamento pós-confirmação
+    },
+  });
+
+  if (error) throw error;
+
+  // (opcional) guardar e-mail pra usar no "reenviar"
+  localStorage.setItem('pendingEmail', email);
+
+  return data.user;
+}
 
   async signOut() {
     const { error } = await this.supa.client.auth.signOut();

@@ -1,0 +1,18 @@
+<main class="wrap" [ngClass]="status">
+  <div class="card">
+    <div class="brand">
+      <div class="badge">GF</div>
+      <span class="name">GranaFlow</span>
+    </div>
+
+    <h1 *ngIf="status==='loading'">Autenticando…</h1>
+    <h1 *ngIf="status==='ok'">Conta confirmada!</h1>
+    <h1 *ngIf="status==='expired'">Link expirado</h1>
+    <h1 *ngIf="status==='error'">Não deu certo 😕</h1>
+
+    <p class="muted">{{ message }}</p>
+
+    <button *ngIf="status==='expired'" class="btn" (click)="resend()">Reenviar e-mail de confirmação</button>
+    <a *ngIf="status==='ok'" routerLink="/" class="btn ghost">Ir para o app</a>
+  </div>
+</main>
