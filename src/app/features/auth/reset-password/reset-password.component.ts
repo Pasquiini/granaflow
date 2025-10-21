@@ -1,4 +1,3 @@
-// pages/reset-password/reset-password.component.ts
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -20,37 +19,49 @@ export class ResetPasswordComponent implements OnInit {
 
   constructor(private fb: FormBuilder, private sb: SupabaseService, private router: Router) {}
 
-  async ngOnInit() {
-    try {
-      const { error } = await this.sb.handleRecoveryFromUrl(window.location.href);
-      if (error) throw error;
-
-      this.form = this.fb.group(
-        {
-          password: ['', [Validators.required, Validators.minLength(8)]],
-          confirm: ['', [Validators.required]],
-        },
-        { validators: (g: FormGroup) =>
-            g.get('password')!.value === g.get('confirm')!.value ? null : { mismatch: true } }
-      );
-
-      this.ready = true; // só fica true se veio de um link válido
-    } catch (err: any) {
-      this.errorMsg = err?.message ?? 'Link de recuperação inválido ou expirado.';
-    } finally {
-      this.loading = false;
-    }
+  /**
+   * ✅ Adicione este método na classe
+   *  Ele será usado como validador do FormGroup.
+   */
+  passwordsMatch(group: FormGroup) {
+    const pass = group.get('password')?.value;
+    const confirm = group.get('confirm')?.value;
+    return pass && confirm && pass === confirm ? null : { mismatch: true };
   }
 
+async ngOnInit() {
+  try {
+    const { error } = await this.sb.handleRecoveryFromUrl(window.location.href);
+    if (error) throw error;
+
+    this.form = this.fb.group(
+      {
+        password: ['', [Validators.required, Validators.minLength(8)]],
+        confirm: ['', [Validators.required]],
+      },
+      { validators: this.passwordsMatch.bind(this) }
+    );
+
+    this.ready = true;
+  } catch (err: any) {
+    this.errorMsg = err?.message ?? 'Link de recuperação inválido ou expirado.';
+  } finally {
+    this.loading = false;
+  }
+}
+
   async submit() {
-    if (this.form.invalid) { this.form.markAllAsTouched(); return; }
+    if (this.form.invalid) {
+      this.form.markAllAsTouched();
+      return;
+    }
     this.loading = true;
     try {
       const pass = this.form.value.password;
       const { error } = await this.sb.updatePassword(pass);
       if (error) throw error;
       this.successMsg = 'Senha alterada com sucesso! Você já pode fazer login.';
-      setTimeout(() => this.router.navigateByUrl('/login'), 1200);
+      setTimeout(() => this.router.navigateByUrl('/login'), 1500);
     } catch (err: any) {
       this.errorMsg = err?.message ?? 'Não foi possível alterar a senha.';
     } finally {

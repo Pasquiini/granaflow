@@ -9,6 +9,7 @@ export const routes: Routes = [
   // 1️⃣ Landing Page pública
   {
     path: '',
+    pathMatch: 'full',
     loadComponent: () =>
       import('./features/landing-page/landing-page.component').then(
         (m) => m.LandingPageComponent

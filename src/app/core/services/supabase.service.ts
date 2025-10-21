@@ -1,4 +1,3 @@
-// core/services/supabase.service.ts
 import { Injectable } from '@angular/core';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { environment } from '../../../environments/environment';
@@ -13,12 +12,14 @@ export class SupabaseService {
         persistSession: true,
         autoRefreshToken: true,
         detectSessionInUrl: true,
-        flowType: 'implicit', // garanta que não está 'pkce'
+        flowType: 'implicit', // ⚡️ importante! evita exigir code_verifier
       },
     });
   }
 
-  get client() { return this._client; }
+  get client() {
+    return this._client;
+  }
 
   async sendResetPasswordEmail(email: string, redirectTo?: string) {
     return this._client.auth.resetPasswordForEmail(email, {
@@ -26,25 +27,30 @@ export class SupabaseService {
     });
   }
 
-  /** Chame isto no ngOnInit da página /reset-password */
+  /** Lida com os dois formatos possíveis: #access_token ou ?code= */
   async handleRecoveryFromUrl(fullUrl: string) {
     const url = new URL(fullUrl);
 
-    // HASH: #access_token=...&type=recovery
-    const hash = url.hash.replace(/^#/, '');
-    const hs = new URLSearchParams(hash);
-    if (hs.get('type') === 'recovery' && hs.get('access_token')) {
+    // 1️⃣ Caso de recuperação com hash (#access_token=...&type=recovery)
+    const hash = new URLSearchParams(url.hash.replace(/^#/, ''));
+    const accessToken = hash.get('access_token');
+    const type = hash.get('type');
+
+    if (accessToken && type === 'recovery') {
       return this._client.auth.exchangeCodeForSession(fullUrl);
     }
 
-    // QUERY: ?code=...&type=recovery
-    const qs = url.searchParams;
-    if (qs.get('type') === 'recovery' && qs.get('code')) {
-      // quando o e-mail veio como ?code=..., use verifyOtp em vez de PKCE
-      return this._client.auth.verifyOtp({ type: 'recovery', token_hash: qs.get('code')! });
+    // 2️⃣ Caso de recuperação com query (?code=...&type=recovery)
+    const code = url.searchParams.get('code');
+    const queryType = url.searchParams.get('type');
+    if (code && queryType === 'recovery') {
+      return this._client.auth.verifyOtp({
+        type: 'recovery',
+        token_hash: code,
+      });
     }
 
-    // nenhum token → não faça nada
+    // 3️⃣ Caso nenhum token encontrado
     return { data: null, error: null };
   }
 
