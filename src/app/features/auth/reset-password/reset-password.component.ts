@@ -17,7 +17,7 @@ export class ResetPasswordComponent implements OnInit {
   errorMsg = '';
   successMsg = '';
 
-  constructor(private fb: FormBuilder, private sb: SupabaseService, private router: Router) {}
+  constructor(private fb: FormBuilder, private sb: SupabaseService, private router: Router) { }
 
   /**
    * ✅ Adicione este método na classe
@@ -29,26 +29,33 @@ export class ResetPasswordComponent implements OnInit {
     return pass && confirm && pass === confirm ? null : { mismatch: true };
   }
 
-async ngOnInit() {
-  try {
-    const { error } = await this.sb.handleRecoveryFromUrl(window.location.href);
-    if (error) throw error;
+  async ngOnInit() {
+    try {
+      // (opcional) ver, no console, a URL completa que chegou
+      // console.log('href ->', window.location.href);
 
-    this.form = this.fb.group(
-      {
-        password: ['', [Validators.required, Validators.minLength(8)]],
-        confirm: ['', [Validators.required]],
-      },
-      { validators: this.passwordsMatch.bind(this) }
-    );
+      const { error } = await this.sb.handleRecoveryFromUrl(window.location.href);
+      if (error) throw error;
 
-    this.ready = true;
-  } catch (err: any) {
-    this.errorMsg = err?.message ?? 'Link de recuperação inválido ou expirado.';
-  } finally {
-    this.loading = false;
+      this.form = this.fb.group(
+        {
+          password: ['', [Validators.required, Validators.minLength(8)]],
+          confirm: ['', [Validators.required]],
+        },
+        { validators: this.passwordsMatch.bind(this) }
+      );
+
+      // (opcional) confirmar que a sessão existe
+      // const sess = await this.sb.client.auth.getSession();
+      // console.log('session ->', sess.data.session);
+
+      this.ready = true;
+    } catch (err: any) {
+      this.errorMsg = err?.message ?? 'Link de recuperação inválido ou expirado.';
+    } finally {
+      this.loading = false;
+    }
   }
-}
 
   async submit() {
     if (this.form.invalid) {

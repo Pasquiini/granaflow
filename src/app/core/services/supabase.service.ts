@@ -11,8 +11,10 @@ export class SupabaseService {
       auth: {
         persistSession: true,
         autoRefreshToken: true,
-        detectSessionInUrl: true,
-        flowType: 'implicit', // ⚡️ importante! evita exigir code_verifier
+        // ⚠️ desligado para não processar hash automaticamente
+        detectSessionInUrl: false,
+        // SPA flow (não exige code_verifier)
+        flowType: 'implicit',
       },
     });
   }
@@ -21,40 +23,49 @@ export class SupabaseService {
     return this._client;
   }
 
-  async sendResetPasswordEmail(email: string, redirectTo?: string) {
+  sendResetPasswordEmail(email: string, redirectTo?: string) {
     return this._client.auth.resetPasswordForEmail(email, {
       redirectTo: redirectTo ?? `${window.location.origin}/reset-password`,
     });
   }
 
-  /** Lida com os dois formatos possíveis: #access_token ou ?code= */
+  /**
+   * Trata 2 formatos:
+   * 1) #access_token=...&refresh_token=...&type=recovery  -> setSession()
+   * 2) ?code=...&type=recovery                             -> verifyOtp()
+   */
   async handleRecoveryFromUrl(fullUrl: string) {
     const url = new URL(fullUrl);
 
-    // 1️⃣ Caso de recuperação com hash (#access_token=...&type=recovery)
+    // --- HASH: #access_token ... (recomendado pelo Supabase)
     const hash = new URLSearchParams(url.hash.replace(/^#/, ''));
+    const typeHash = hash.get('type');
     const accessToken = hash.get('access_token');
-    const type = hash.get('type');
+    const refreshToken = hash.get('refresh_token');
 
-    if (accessToken && type === 'recovery') {
-      return this._client.auth.exchangeCodeForSession(fullUrl);
-    }
-
-    // 2️⃣ Caso de recuperação com query (?code=...&type=recovery)
-    const code = url.searchParams.get('code');
-    const queryType = url.searchParams.get('type');
-    if (code && queryType === 'recovery') {
-      return this._client.auth.verifyOtp({
-        type: 'recovery',
-        token_hash: code,
+    if (typeHash === 'recovery' && accessToken && refreshToken) {
+      // ✅ monta a sessão diretamente, sem PKCE
+      return this._client.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken,
       });
     }
 
-    // 3️⃣ Caso nenhum token encontrado
+    // --- QUERY: ?code=... (alguns templates mandam assim)
+    const qs = url.searchParams;
+    const typeQuery = qs.get('type');
+    const code = qs.get('code');
+
+    if (typeQuery === 'recovery' && code) {
+      // ✅ fluxo alternativo sem code_verifier
+      return this._client.auth.verifyOtp({ type: 'recovery', token_hash: code });
+    }
+
+    // Nada a fazer
     return { data: null, error: null };
   }
 
-  async updatePassword(newPassword: string) {
+  updatePassword(newPassword: string) {
     return this._client.auth.updateUser({ password: newPassword });
   }
 }
