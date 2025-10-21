@@ -1,9 +1,10 @@
-import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, Inject, OnInit, Renderer2 } from '@angular/core';
+import { CommonModule, DOCUMENT } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { NgOptimizedImage } from '@angular/common';
 import { trigger, transition, style, animate, query, stagger } from '@angular/animations';
 import { AuthService } from '../../core/services/auth.service';
+import { Meta, Title } from '@angular/platform-browser';
 
 @Component({
   selector: 'app-landing-page',
@@ -380,12 +381,123 @@ import { AuthService } from '../../core/services/auth.service';
 export class LandingPageComponent implements OnInit {
   year = new Date().getFullYear();
 
-  constructor(private auth: AuthService, private router: Router) {}
+  constructor(
+    private auth: AuthService,
+    private router: Router,
+    private title: Title,
+    private meta: Meta,
+    private renderer: Renderer2,
+    @Inject(DOCUMENT) private document: Document,
+  ) { }
 
   ngOnInit() {
+    // 1) Título e meta description (aparecem no Google)
+    this.title.setTitle('GranaFlow | Controle financeiro simples, visual e sem planilhas');
+    this.meta.updateTag({
+      name: 'description',
+      content:
+        'Gerencie receitas e despesas, defina metas e visualize insights práticos. GranaFlow: controle financeiro inteligente, rápido e sem planilhas.',
+    });
+
+    // 2) Robots, canonical e idioma
+    this.meta.updateTag({ name: 'robots', content: 'index,follow' });
+    this.setCanonical('https://granaflow-liart.vercel.app/');
+    this.meta.updateTag({ name: 'language', content: 'pt-BR' });
+
+    // 3) Open Graph (Facebook/WhatsApp) e Twitter Cards
+    this.meta.updateTag({ property: 'og:title', content: 'GranaFlow | Controle financeiro inteligente' });
+    this.meta.updateTag({ property: 'og:description', content: 'Centralize gastos, metas e insights em um painel simples.' });
+    this.meta.updateTag({ property: 'og:type', content: 'website' });
+    this.meta.updateTag({ property: 'og:url', content: 'https://granaflow-liart.vercel.app/' });
+    this.meta.updateTag({ property: 'og:image', content: 'https://granaflow-liart.vercel.app/og-cover.jpg' }); // crie essa imagem 1200x630
+
+    this.meta.updateTag({ name: 'twitter:card', content: 'summary_large_image' });
+    this.meta.updateTag({ name: 'twitter:title', content: 'GranaFlow | Controle financeiro inteligente' });
+    this.meta.updateTag({ name: 'twitter:description', content: 'Veja seus números com clareza e decida melhor.' });
+    this.meta.updateTag({ name: 'twitter:image', content: 'https://granaflow-liart.vercel.app/og-cover.jpg' });
+
+    // 4) JSON-LD (dados estruturados) sem alterar layout
+    this.injectJsonLd(this.websiteLd());
+    this.injectJsonLd(this.organizationLd());
+    this.injectJsonLd(this.faqLd()); // usa as perguntas da sua seção FAQ
   }
 
   isLoggedIn() {
     return this.auth.isLoggedIn();
+  }
+
+  // helpers
+  private setCanonical(url: string) {
+    let link: HTMLLinkElement | null = this.document.querySelector("link[rel='canonical']");
+    if (!link) {
+      link = this.renderer.createElement('link');
+      this.renderer.setAttribute(link, 'rel', 'canonical');
+      this.renderer.appendChild(this.document.head, link);
+    }
+    this.renderer.setAttribute(link, 'href', url);
+  }
+
+  private injectJsonLd(data: object) {
+    const script = this.renderer.createElement('script');
+    script.type = 'application/ld+json';
+    script.text = JSON.stringify(data);
+    this.renderer.appendChild(this.document.head, script);
+  }
+
+  private websiteLd() {
+    return {
+      '@context': 'https://schema.org',
+      '@type': 'WebSite',
+      name: 'GranaFlow',
+      url: 'https://granaflow-liart.vercel.app/',
+      potentialAction: {
+        '@type': 'SearchAction',
+        target: 'https://granaflow-liart.vercel.app/?q={search_term_string}',
+        'query-input': 'required name=search_term_string'
+      }
+    };
+  }
+
+  private organizationLd() {
+    return {
+      '@context': 'https://schema.org',
+      '@type': 'Organization',
+      name: 'GranaFlow',
+      url: 'https://granaflow-liart.vercel.app/',
+      logo: 'https://granaflow-liart.vercel.app/logo-512.png' // coloque esse arquivo em /public
+    };
+  }
+
+  private faqLd() {
+    return {
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      mainEntity: [
+        {
+          '@type': 'Question',
+          name: 'O GranaFlow é realmente gratuito?',
+          acceptedAnswer: {
+            '@type': 'Answer',
+            text: 'Sim. Há um plano gratuito com limites generosos. O Pro desbloqueia recursos avançados.'
+          }
+        },
+        {
+          '@type': 'Question',
+          name: 'Posso importar meu histórico?',
+          acceptedAnswer: {
+            '@type': 'Answer',
+            text: 'Pode! CSV/Excel já disponíveis. OFX está no roadmap.'
+          }
+        },
+        {
+          '@type': 'Question',
+          name: 'Como meus dados são protegidos?',
+          acceptedAnswer: {
+            '@type': 'Answer',
+            text: 'Criptografia em repouso, controle de sessão e exportação/remoção sob demanda.'
+          }
+        }
+      ]
+    };
   }
 }
