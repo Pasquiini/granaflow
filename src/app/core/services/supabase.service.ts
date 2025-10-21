@@ -1,3 +1,4 @@
+// core/services/supabase.service.ts
 import { Injectable } from '@angular/core';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { environment } from '../../../environments/environment';
@@ -12,15 +13,12 @@ export class SupabaseService {
         persistSession: true,
         autoRefreshToken: true,
         detectSessionInUrl: true,
-        // força fluxo de SPA; evita exigir PKCE em reset por e-mail
-        flowType: 'implicit',
+        flowType: 'implicit', // garanta que não está 'pkce'
       },
     });
   }
 
-  get client() {
-    return this._client;
-  }
+  get client() { return this._client; }
 
   async sendResetPasswordEmail(email: string, redirectTo?: string) {
     return this._client.auth.resetPasswordForEmail(email, {
@@ -28,30 +26,25 @@ export class SupabaseService {
     });
   }
 
-  /**
-   * Chame no ngOnInit() da página /reset-password passando window.location.href
-   * Lida com: 1) #access_token... (hash)  2) ?code=...&type=recovery (query)
-   */
+  /** Chame isto no ngOnInit da página /reset-password */
   async handleRecoveryFromUrl(fullUrl: string) {
     const url = new URL(fullUrl);
 
-    // 1) Caso com HASH: #access_token=...&type=recovery
+    // HASH: #access_token=...&type=recovery
     const hash = url.hash.replace(/^#/, '');
-    const h = new URLSearchParams(hash);
-    const accessToken = h.get('access_token');
-    const hashType = h.get('type');
-    if (accessToken && hashType === 'recovery') {
+    const hs = new URLSearchParams(hash);
+    if (hs.get('type') === 'recovery' && hs.get('access_token')) {
       return this._client.auth.exchangeCodeForSession(fullUrl);
     }
 
-    // 2) Caso com QUERY: ?code=...&type=recovery
-    const code = url.searchParams.get('code');
-    const qType = url.searchParams.get('type');
-    if (code && qType === 'recovery') {
-      // Fallback quando veio como code (sem code_verifier)
-      return this._client.auth.verifyOtp({ type: 'recovery', token_hash: code });
+    // QUERY: ?code=...&type=recovery
+    const qs = url.searchParams;
+    if (qs.get('type') === 'recovery' && qs.get('code')) {
+      // quando o e-mail veio como ?code=..., use verifyOtp em vez de PKCE
+      return this._client.auth.verifyOtp({ type: 'recovery', token_hash: qs.get('code')! });
     }
 
+    // nenhum token → não faça nada
     return { data: null, error: null };
   }
 
