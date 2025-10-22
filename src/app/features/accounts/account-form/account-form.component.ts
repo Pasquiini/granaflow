@@ -4,11 +4,12 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AccountsService } from '../../../core/services/accounts.service';
 import type { Account, AccountType } from '../../../core/models/account.model';
+import { CurrencyMaskDirective } from '../../../shared/directives/currency-mask.directive';
 
 @Component({
   standalone: true,
   selector: 'app-account-form',
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, CurrencyMaskDirective],
   template: `
   <div class="rounded-xl bg-white p-6 shadow">
     <h1 class="text-2xl font-semibold text-brand-primary">
@@ -34,8 +35,16 @@ import type { Account, AccountType } from '../../../core/models/account.model';
 
       <div>
         <label class="text-sm text-gray-600">Saldo inicial</label>
-        <input class="mt-1 w-full rounded-lg border p-2" type="number" step="0.01"
-               [(ngModel)]="initial_balance" name="initial_balance" required />
+        <input
+          class="mt-1 w-full rounded-lg border p-2"
+          type="text"
+          name="initial_balance"
+          [(ngModel)]="initial_balance"
+          currencyMask
+          [locale]="'pt-BR'"
+          [currency]="'BRL'"
+          [allowNegative]="type === 'credit'"
+        />
       </div>
 
       <div class="flex items-center gap-3">

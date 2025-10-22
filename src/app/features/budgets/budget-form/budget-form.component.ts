@@ -6,11 +6,12 @@ import { BudgetsService } from '../../../core/services/budgets.service';
 import { CategoriesService } from '../../../core/services/categories.service';
 import type { Budget } from '../../../core/models/budget.model';
 import type { Category } from '../../../core/models/category.model';
+import { CurrencyMaskDirective } from '../../../shared/directives/currency-mask.directive';
 
 @Component({
   standalone: true,
   selector: 'app-budget-form',
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, CurrencyMaskDirective],
   template: `
   <div class="rounded-xl bg-white p-6 shadow max-w-xl">
     <h1 class="text-2xl font-semibold text-brand-primary">{{ isEdit ? 'Editar' : 'Novo' }} orçamento</h1>
@@ -31,9 +32,20 @@ import type { Category } from '../../../core/models/category.model';
 
       <div>
         <label class="text-sm text-gray-600">Limite (R$)</label>
-        <input type="number" step="0.01" class="mt-1 w-full rounded-lg border p-2" [(ngModel)]="limit_amount" name="limit_amount" required />
+        <!-- Troque para text e aplique a diretiva -->
+        <input
+          type="text"
+          class="mt-1 w-full rounded-lg border p-2"
+          name="limit_amount"
+          [(ngModel)]="limit_amount"
+          currencyMask
+          [locale]="'pt-BR'"
+          [currency]="'BRL'"
+          [allowNegative]="false"
+          inputmode="decimal"
+          autocomplete="off"
+        />
       </div>
-
       <div class="flex items-center gap-3">
         <button class="rounded-lg bg-brand-primary px-4 py-2 text-white hover:opacity-95">
           {{ isEdit ? 'Salvar' : 'Criar' }}
