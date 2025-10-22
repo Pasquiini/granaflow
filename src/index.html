@@ -1,23 +1,36 @@
 <!doctype html>
-<html lang="en">
-
+<html lang="pt-br">
 <head>
   <meta charset="utf-8">
   <title>GranaFlow | Controle Financeiro Inteligente</title>
   <meta name="description"
-    content="Gerencie suas finanças de forma simples e automática com o GranaFlow. Tenha clareza sobre seus gastos e metas em um só lugar.">
+        content="Gerencie suas finanças de forma simples e automática com o GranaFlow. Tenha clareza sobre seus gastos e metas em um só lugar.">
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+
   <link rel="icon" type="image/x-icon" href="favicon.ico">
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+  <!-- SEO / Verificação -->
   <meta name="google-site-verification" content="SLl7q8efeK6ln2l4QDbtbvTh_LRg9cylUJpaWIPPkI0" />
   <meta name="robots" content="index, follow">
-  <link rel="canonical" href="https://granaflow-liart.vercel.app/" />
+  <!-- Ajuste para o domínio final quando estiver publicado -->
+  <link rel="canonical" href="https://granaflow.app/" />
+
+  <!-- Google tag (gtag.js) | GA4 -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-81SQHBSFQN"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){ dataLayer.push(arguments); }
+    gtag('js', new Date());
+
+    // Desativa o page_view automático em SPA; enviaremos nas trocas de rota
+    gtag('config', 'G-81SQHBSFQN', { send_page_view: false });
+  </script>
 </head>
 
 <body class="mat-typography">
   <app-root></app-root>
 </body>
-
 </html>
