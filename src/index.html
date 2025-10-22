@@ -15,8 +15,53 @@
   <!-- SEO / Verificação -->
   <meta name="google-site-verification" content="SLl7q8efeK6ln2l4QDbtbvTh_LRg9cylUJpaWIPPkI0" />
   <meta name="robots" content="index, follow">
-  <!-- Ajuste para o domínio final quando estiver publicado -->
-  <link rel="canonical" href="https://granaflow.app/" />
+
+  <!-- Canonical (ajuste para o domínio final quando ativo) -->
+  <link rel="canonical" href="https://granaflow-liart.vercel.app/" />
+
+  <!-- Open Graph (Facebook, WhatsApp, LinkedIn) -->
+  <meta property="og:title" content="GranaFlow | Controle Financeiro Inteligente">
+  <meta property="og:description" content="Gerencie suas finanças de forma simples e automática. Centralize receitas e despesas, defina metas e acompanhe tudo em um painel visual — sem planilhas.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://granaflow-liart.vercel.app/">
+  <meta property="og:image" content="https://granaflow-liart.vercel.app/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:locale" content="pt_BR">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="GranaFlow | Controle Financeiro Inteligente">
+  <meta name="twitter:description" content="Visual, intuitivo e sem planilhas. Alcance suas metas com o GranaFlow.">
+  <meta name="twitter:image" content="https://granaflow-liart.vercel.app/og-image.png">
+
+  <!-- Preferência de idioma -->
+  <link rel="alternate" href="https://granaflow-liart.vercel.app/" hreflang="pt-br">
+
+  <!-- Tema para mobile -->
+  <meta name="theme-color" content="#121212">
+
+  <!-- Structured Data (JSON-LD para Google) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "GranaFlow",
+    "url": "https://granaflow-liart.vercel.app/",
+    "applicationCategory": "FinanceApplication",
+    "operatingSystem": "Web",
+    "description": "Controle financeiro inteligente, simples e visual — sem planilhas. Centralize receitas e despesas, defina metas e veja insights práticos.",
+    "image": "https://granaflow-liart.vercel.app/og-image.png",
+    "publisher": {
+      "@type": "Organization",
+      "name": "GranaFlow",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://granaflow-liart.vercel.app/logo.png"
+      }
+    }
+  }
+  </script>
 
   <!-- Google tag (gtag.js) | GA4 -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-81SQHBSFQN"></script>
@@ -24,7 +69,6 @@
     window.dataLayer = window.dataLayer || [];
     function gtag(){ dataLayer.push(arguments); }
     gtag('js', new Date());
-
     // Desativa o page_view automático em SPA; enviaremos nas trocas de rota
     gtag('config', 'G-81SQHBSFQN', { send_page_view: false });
   </script>
