@@ -4,6 +4,7 @@ import { PageShellComponent } from './shared/components/page-shell/page-shell.co
 import { PlanGuard } from './core/guards/plan.guard';
 import { ForgotPasswordComponent } from './features/auth/forgot-password/forgot-password.component';
 import { ResetPasswordComponent } from './features/auth/reset-password/reset-password.component';
+import { AdminGuard } from './core/guards/admin.guard'; // 👈 novo
 
 export const routes: Routes = [
   // 1️⃣ Landing Page pública
@@ -30,6 +31,7 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./features/auth/register/register.component').then((m) => m.RegisterComponent),
   },
+
   // 3️⃣ Área logada — com layout (Navbar + Sidebar)
   {
     path: '',
@@ -78,6 +80,21 @@ export const routes: Routes = [
       { path: 'profile', loadComponent: () => import('./features/profile-page/profile-page.component').then(m => m.ProfilePageComponent) },
       { path: 'billing', loadComponent: () => import('./features/billing/billing-page.component').then(m => m.BillingPageComponent) },
       { path: 'billing/confirm', loadComponent: () => import('./features/billing/billing-confirm.component').then(m => m.BillingConfirmComponent) },
+
+      // 🔐  Admin (somente para e-mails autorizados)
+      {
+        path: 'admin',
+        canMatch: [AdminGuard], // usa observable/guard que checa o e-mail
+        children: [
+          { path: '', pathMatch: 'full', redirectTo: 'overview' },
+          { path: 'overview', loadComponent: () => import('./features/admin/overview.component').then(m => m.OverviewComponent) },
+          { path: 'users',    loadComponent: () => import('./features/admin/users.component').then(m => m.UsersComponent) },
+          { path: 'access',   loadComponent: () => import('./features/admin/access.component').then(m => m.AdminAccessComponent) },
+          { path: 'plans',    loadComponent: () => import('./features/admin/plans.component').then(m => m.PlansComponent) },
+          { path: 'billing',  loadComponent: () => import('./features/admin/billing.component').then(m => m.BillingComponent) },
+          { path: 'settings', loadComponent: () => import('./features/admin/settings.component').then(m => m.SettingsComponent) },
+        ]
+      },
     ],
   },
 

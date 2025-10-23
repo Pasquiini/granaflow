@@ -1,9 +1,10 @@
 import { CommonModule } from '@angular/common';
 import { Component, HostListener, Input, OnInit } from '@angular/core';
 import { ActivatedRoute, NavigationEnd, Router, RouterLink, RouterLinkActive } from '@angular/router';
-import { filter } from 'rxjs/operators';
+import { filter, take } from 'rxjs/operators';
 import { BillingService, Subscription } from '../../../core/services/billing.service';
 import { HelpDrawerComponent } from '../../../features/help/help-drawer/help-drawer.component';
+import { AdminService } from '../../../core/services/admin.service'; // 👈 novo
 
 type MenuItem = { path: string; label: string; icon: string };
 
@@ -11,7 +12,7 @@ type MenuItem = { path: string; label: string; icon: string };
   selector: 'app-sidebar',
   standalone: true,
   imports: [RouterLink, RouterLinkActive, CommonModule, HelpDrawerComponent],
-  // providers: [BillingService], // ideal: deixe o service providedIn:'root' para evitar múltiplas instâncias
+  // providers: [BillingService],
   template: `
     <!-- overlay mobile -->
     <div
@@ -83,6 +84,32 @@ type MenuItem = { path: string; label: string; icon: string };
             ></span>
           </a>
 
+          <!-- seção admin -->
+          <div class="px-1 mt-4" *ngIf="isAdmin">
+            <div class="flex items-center gap-2 text-[11px] uppercase tracking-wider text-emerald-900/50 px-2">
+              <span class="h-px flex-1 bg-emerald-200/60"></span>
+              <span>admin</span>
+              <span class="h-px flex-1 bg-emerald-200/60"></span>
+            </div>
+          </div>
+
+          <nav *ngIf="isAdmin" class="mt-2 space-y-1 px-2 overflow-visible">
+            <a
+              *ngFor="let item of adminMenu"
+              [routerLink]="item.path"
+              routerLinkActive="active"
+              [routerLinkActiveOptions]="{ exact: true }"
+              class="group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-slate-700
+                     transition-all duration-200 hover:bg-emerald-50/80 hover:text-emerald-700
+                     ring-1 ring-transparent motion-reduce:transition-none"
+            >
+              <span class="absolute left-0 top-1/2 -translate-y-1/2 h-7 w-1 rounded-r-full bg-emerald-500/70 opacity-0 transition-all duration-200 group-[.active]:opacity-100 group-hover:opacity-60"></span>
+              <span class="text-[18px] opacity-90 shrink-0">{{ item.icon }}</span>
+              <span class="font-medium text-[0.95rem] truncate">{{ item.label }}</span>
+              <span class="absolute inset-0 -z-10 scale-95 rounded-xl bg-emerald-500/0 blur-[2px] transition group-[.active]:bg-emerald-500/10 group-hover:bg-emerald-500/5"></span>
+            </a>
+          </nav>
+
           <!-- link fixo: Ajuda -->
           <a
             (click)="helpOpen = true"
@@ -120,6 +147,14 @@ type MenuItem = { path: string; label: string; icon: string };
               [ngClass]="isPro ? 'bg-emerald-600/10 text-emerald-700 ring-emerald-600/25' : 'bg-amber-500/10 text-amber-700 ring-amber-500/25'"
             >
               <span class="leading-none">{{ isPro ? 'PRO' : 'FREE' }}</span>
+            </span>
+
+            <!-- selo ADMIN no rodapé -->
+            <span
+              *ngIf="isAdmin"
+              class="ml-2 rounded-full bg-emerald-900/10 px-2 py-0.5 text-emerald-900 ring-1 ring-emerald-900/20 text-[11px]"
+            >
+              ADMIN
             </span>
           </a>
         </div>
@@ -171,7 +206,7 @@ export class SidebarComponent implements OnInit {
 
   year = new Date().getFullYear();
   isPro = false;
-
+  isAdmin = false; // 👈 novo
   helpOpen = false;
 
   menu: MenuItem[] = [
@@ -184,16 +219,30 @@ export class SidebarComponent implements OnInit {
     { path: '/insights', label: 'Insights', icon: '🧠' },
   ];
 
+  // 👇 itens do menu admin
+  adminMenu: MenuItem[] = [
+    { path: '/admin/overview', label: 'Admin', icon: '🛡️' },
+    { path: '/admin/users', label: 'Usuários', icon: '👥' },
+    { path: '/admin/access',   label: 'Admin - Acesso', icon: '🔐' },
+    // { path: '/admin/plans', label: 'Planos', icon: '🧾' },
+    { path: '/admin/billing', label: 'Cobranças', icon: '💎' },
+    // { path: '/admin/settings', label: 'Configurações', icon: '⚙️' },
+  ];
+
   constructor(
     private billing: BillingService,
     private router: Router,
     private route: ActivatedRoute,
+    private adminService: AdminService, // 👈 novo
   ) { }
 
   async ngOnInit() {
     const sub = await this.billing.getMySubscription().catch(() => null) as Subscription | null;
     this.isPro = !!sub && (sub.plan_id?.toLowerCase?.() === 'pro') &&
       (['active', 'trialing'].includes((sub.status ?? '').toLowerCase()));
+
+    // checar permissões de admin (pega o valor atual)
+    this.adminService.isAdmin$.pipe(take(1)).subscribe(v => this.isAdmin = v);
 
     // abrir via querystring ?help=1
     this.router.events
