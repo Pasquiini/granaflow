@@ -1,5 +1,8 @@
 import { Injectable } from '@angular/core';
 import { SupabaseService } from './supabase.service';
+import { GoalContribution } from '../models/goal-contribution.model';
+import { GoalsService } from './goals.service';
+import { Goal } from '../models/goal.model';
 
 export interface Overview {
   month: string;        // 'YYYY-MM-01'
@@ -26,10 +29,29 @@ export interface CategoryDelta {
   delta: number;
   delta_pct: number | null;
 }
-
+export type GoalsOverview = {
+  kpis: {
+    contributedThisMonth: number;
+    remainingTotal: number;
+    atRiskCount: number;
+    avgEtaMonths: number;
+  };
+  atRisk: Array<{
+    id: string;
+    title: string;
+    status: 'active' | 'done' | 'overdue';
+    due_date?: string | null;
+    remaining: number;
+    needPerMonth?: number | null;
+    avgPerMonth?: number | null;
+    lastContributionAt?: string | null;
+    reason: 'overdue' | 'shortfall' | 'inactive';
+  }>;
+  suggestions: Array<{ id: string; title: string; suggestion: string }>;
+};
 @Injectable({ providedIn: 'root' })
 export class InsightsService {
-  constructor(private supa: SupabaseService) {}
+  constructor(private supa: SupabaseService, private goals: GoalsService) {}
 
   /** Normaliza 'YYYY-MM' -> 'YYYY-MM-01' */
   private monthStart(monthISO: string) {
@@ -135,4 +157,147 @@ export class InsightsService {
 
     return msgs;
   }
+
+  async goalsOverview(monthISO: string): Promise<GoalsOverview> {
+  // 1) metas do usuário
+  const metas: Goal[] = await this.goals.list();
+
+  const now = new Date();
+  const monthStart = new Date(monthISO);
+  const monthEnd = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0, 23, 59, 59);
+  const last12Start = new Date(now.getFullYear(), now.getMonth() - 11, 1);
+
+  // helpers
+  const sum = (arr: { amount: number }[]) => arr.reduce((s, x) => s + Number(x.amount || 0), 0);
+  const monthsBetween = (a: Date, b: Date) => {
+    const d = (b.getFullYear() - a.getFullYear()) * 12 + (b.getMonth() - a.getMonth());
+    return Math.max(0, d + (b.getDate() >= a.getDate() ? 0 : -1));
+  };
+
+  let contributedThisMonthTotal = 0;
+  let remainingTotal = 0;
+
+  type Row = {
+    g: Goal;
+    contributedThisMonth: number;
+    avgPerMonth: number | null;
+    needPerMonth: number | null;
+    remaining: number;
+    lastContributionAt: string | null;
+    etaMonths: number | null;
+    atRiskReason?: 'overdue' | 'shortfall' | 'inactive';
+  };
+
+  const rows: Row[] = [];
+
+  for (const g of metas) {
+    const contribs: GoalContribution[] = await this.goals.listContributions(g.id);
+
+    // ordena desc só por segurança
+    contribs.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+    const inThisMonth = contribs.filter(c => {
+      const d = new Date(c.created_at);
+      return d >= monthStart && d <= monthEnd;
+    });
+    const last12 = contribs.filter(c => new Date(c.created_at) >= last12Start);
+
+    const contributedThisMonth = sum(inThisMonth);
+    contributedThisMonthTotal += contributedThisMonth;
+
+    const monthsWindow = Math.max(1, monthsBetween(last12Start, now) + 1);
+    const avgPerMonth = last12.length ? sum(last12 as any) / monthsWindow : null;
+
+    const remaining = Math.max(0, Number(g.target_amount) - Number(g.current_amount));
+    remainingTotal += remaining;
+
+    let monthsToDue: number | null = null;
+    if (g.due_date) {
+      const due = new Date(g.due_date);
+      monthsToDue = Math.max(0, monthsBetween(now, due));
+    }
+
+    const needPerMonth = monthsToDue && monthsToDue > 0 ? remaining / monthsToDue : null;
+    const lastContributionAt = contribs.length ? contribs[0].created_at : null;
+
+    // ETA para metas sem prazo, baseado na média
+    const etaMonths = !g.due_date && avgPerMonth && avgPerMonth > 0 ? Math.ceil(remaining / avgPerMonth) : null;
+
+    // regras de risco
+    let atRiskReason: 'overdue' | 'shortfall' | 'inactive' | undefined;
+    const daysSinceLast = lastContributionAt ? Math.floor((now.getTime() - new Date(lastContributionAt).getTime()) / 86400000) : Infinity;
+
+    if (g.status === 'overdue') {
+      atRiskReason = 'overdue';
+    } else if (needPerMonth && avgPerMonth && needPerMonth > avgPerMonth * 1.2) {
+      atRiskReason = 'shortfall'; // média < 80% do necessário
+    } else if (daysSinceLast > 30 && remaining > 0) {
+      atRiskReason = 'inactive';
+    }
+
+    rows.push({
+      g, contributedThisMonth, avgPerMonth, needPerMonth,
+      remaining, lastContributionAt, etaMonths, atRiskReason
+    });
+  }
+
+  // KPIs agregados
+  const atRiskCount = rows.filter(r => r.atRiskReason).length;
+  const etaList = rows.map(r => r.etaMonths).filter((x): x is number => typeof x === 'number');
+  const avgEtaMonths = etaList.length ? Math.round(etaList.reduce((s, x) => s + x, 0) / etaList.length) : 0;
+
+  // Metas em risco (card)
+  const atRisk = rows
+    .filter(r => r.atRiskReason)
+    .map(r => ({
+      id: r.g.id,
+      title: r.g.title,
+      status: r.g.status as 'active' | 'done' | 'overdue',
+      due_date: r.g.due_date ?? null,
+      remaining: r.remaining,
+      needPerMonth: r.needPerMonth ?? null,
+      avgPerMonth: r.avgPerMonth ?? null,
+      lastContributionAt: r.lastContributionAt,
+      reason: r.atRiskReason!
+    }));
+
+  // Sugestões (texto)
+  const suggestions = rows
+    .filter(r => r.remaining > 0)
+    .map(r => {
+      const title = r.g.title;
+      const need = r.needPerMonth ?? 0;
+      const avg = r.avgPerMonth ?? 0;
+      let suggestion = '';
+
+      if (r.g.status === 'overdue') {
+        suggestion = `Prazo ultrapassado. Refaça o prazo ou faça um aporte pontual de R$ ${Math.round(r.remaining).toLocaleString('pt-BR')}.`;
+      } else if (r.needPerMonth && r.needPerMonth > 0) {
+        const gap = Math.max(0, need - avg);
+        if (gap > 0) {
+          suggestion = `Para cumprir o prazo, precisa de ${need.toLocaleString('pt-BR', { style:'currency', currency:'BRL', maximumFractionDigits:0 })}/mês. Hoje sua média é ${avg.toLocaleString('pt-BR', { style:'currency', currency:'BRL', maximumFractionDigits:0 })}; falta ${gap.toLocaleString('pt-BR', { style:'currency', currency:'BRL', maximumFractionDigits:0 })}/mês.`;
+        } else {
+          suggestion = `Ritmo OK: necessário ${need.toLocaleString('pt-BR', { style:'currency', currency:'BRL', maximumFractionDigits:0 })}/mês e média ${avg.toLocaleString('pt-BR', { style:'currency', currency:'BRL', maximumFractionDigits:0 })}/mês.`;
+        }
+      } else if (r.etaMonths) {
+        suggestion = `Sem prazo. Mantendo a média de ${avg.toLocaleString('pt-BR', { style:'currency', currency:'BRL', maximumFractionDigits:0 })}/mês, conclui em ~${r.etaMonths} meses.`;
+      } else {
+        suggestion = `Comece com aportes mensais regulares (ex.: 5–10% da renda) para ganhar tração nesta meta.`;
+      }
+
+      return { id: r.g.id, title, suggestion };
+    });
+
+  return {
+    kpis: {
+      contributedThisMonth: contributedThisMonthTotal,
+      remainingTotal,
+      atRiskCount,
+      avgEtaMonths
+    },
+    atRisk,
+    suggestions
+  };
+}
+
 }

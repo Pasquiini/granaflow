@@ -57,6 +57,24 @@ export const routes: Routes = [
         loadComponent: () => import('./features/reports/reports-page/reports-page.component').then(m => m.ReportsPageComponent),
         canActivate: [PlanGuard]
       },
+      {
+        path: 'goals',
+        canActivate: [PlanGuard],
+        data: { feature: 'goals', requiredPlan: 'pro' },
+        loadComponent: () => import('./features/goals/goals-list.component').then(m => m.GoalsListComponent)
+      },
+      {
+        path: 'goals/new',
+        canActivate: [PlanGuard],
+        data: { feature: 'goals', requiredPlan: 'pro' },
+        loadComponent: () => import('./features/goals/goal-form.component').then(m => m.GoalFormComponent)
+      },
+      {
+        path: 'goals/:id',
+        canActivate: [PlanGuard],
+        data: { feature: 'goals', requiredPlan: 'pro' },
+        loadComponent: () => import('./features/goals/goal-detail.component').then(m => m.GoalDetailComponent)
+      },
       { path: 'profile', loadComponent: () => import('./features/profile-page/profile-page.component').then(m => m.ProfilePageComponent) },
       { path: 'billing', loadComponent: () => import('./features/billing/billing-page.component').then(m => m.BillingPageComponent) },
       { path: 'billing/confirm', loadComponent: () => import('./features/billing/billing-confirm.component').then(m => m.BillingConfirmComponent) },

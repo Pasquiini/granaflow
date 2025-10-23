@@ -175,24 +175,25 @@ export class SidebarComponent implements OnInit {
   helpOpen = false;
 
   menu: MenuItem[] = [
-    { path: '/dashboard',    label: 'Dashboard',     icon: '🏠' },
-    { path: '/accounts',     label: 'Contas',        icon: '💳' },
-    { path: '/transactions', label: 'Transações',    icon: '💸' },
-    { path: '/budgets',      label: 'Orçamentos',    icon: '📊' },
-    { path: '/reports',      label: 'Relatórios',    icon: '📑' },
-    { path: '/insights',     label: 'Insights',      icon: '🧠' },
+    { path: '/dashboard', label: 'Dashboard', icon: '🏠' },
+    { path: '/accounts', label: 'Contas', icon: '💳' },
+    { path: '/transactions', label: 'Transações', icon: '💸' },
+    { path: '/budgets', label: 'Orçamentos', icon: '📊' },
+    { path: '/goals', label: 'Metas', icon: '🎯' },
+    { path: '/reports', label: 'Relatórios', icon: '📑' },
+    { path: '/insights', label: 'Insights', icon: '🧠' },
   ];
 
   constructor(
     private billing: BillingService,
     private router: Router,
     private route: ActivatedRoute,
-  ) {}
+  ) { }
 
   async ngOnInit() {
     const sub = await this.billing.getMySubscription().catch(() => null) as Subscription | null;
     this.isPro = !!sub && (sub.plan_id?.toLowerCase?.() === 'pro') &&
-                 (['active','trialing'].includes((sub.status ?? '').toLowerCase()));
+      (['active', 'trialing'].includes((sub.status ?? '').toLowerCase()));
 
     // abrir via querystring ?help=1
     this.router.events

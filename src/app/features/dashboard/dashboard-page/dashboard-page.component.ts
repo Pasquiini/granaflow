@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, computed, signal, effect } from '@angular/core';
+import { Component, OnInit, OnDestroy, computed, signal } from '@angular/core';
 import { CommonModule, NgClass, NgIf, NgFor } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ChartConfiguration } from 'chart.js';
@@ -11,6 +11,11 @@ import { SupabaseService } from '../../../core/services/supabase.service';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { Router } from '@angular/router';
 
+// ======= NOVOS (Metas) =======
+import { GoalsService } from '../../../core/services/goals.service';
+import type { Goal } from '../../../core/models/goal.model';
+import { CurrencyMaskDirective } from '../../../shared/directives/currency-mask.directive';
+
 // Util BRL rápido p/ tooltips
 const brl = (v: number) =>
   (v ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 2 });
@@ -18,7 +23,7 @@ const brl = (v: number) =>
 @Component({
   standalone: true,
   selector: 'app-dashboard-page',
-  imports: [CommonModule, FormsModule, BaseChartDirective, NgIf, NgFor, NgClass],
+  imports: [CommonModule, FormsModule, BaseChartDirective, NgIf, NgFor, NgClass, CurrencyMaskDirective], // + CurrencyMaskDirective
   template: `
     <div class="space-y-5">
       <!-- Header / Controles -->
@@ -111,6 +116,97 @@ const brl = (v: number) =>
         </div>
       </div>
 
+      <!-- ====== METAS (NOVO BLOCO) ====== -->
+   <div class="rounded-2xl border border-emerald-200/40 bg-white/80 p-6 shadow ring-1 ring-white/40">
+  <!-- Cabeçalho -->
+  <div class="mb-4 flex flex-wrap items-center gap-3">
+    <h2 class="text-sm font-semibold text-emerald-900">Metas</h2>
+    <div class="ml-auto flex flex-wrap items-center gap-2">
+      <button
+        class="rounded-lg border border-emerald-200 bg-white/70 px-3 py-1.5 text-xs text-emerald-800 hover:bg-white"
+        (click)="router.navigate(['/goals'])">
+        Ver todas
+      </button>
+      <button
+        class="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:opacity-95"
+        (click)="router.navigate(['/goals/new'])">
+        Nova meta
+      </button>
+    </div>
+  </div>
+
+  <ng-container *ngIf="goals().length; else emptyGoals">
+    <!-- Grid responsiva: 1 / 2 / 3 colunas -->
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <article
+        *ngFor="let g of goals(); trackBy: trackBalance"
+        class="flex h-full flex-col rounded-xl border border-emerald-200/50 bg-white/90 p-4 transition-shadow hover:shadow-sm">
+
+        <!-- Título + Badge -->
+        <div class="flex items-start gap-3">
+          <h3 class="min-w-0 flex-1 truncate text-base font-semibold leading-tight text-emerald-900" [title]="g.title">
+            {{ g.title }}
+          </h3>
+
+          <span
+            class="shrink-0 rounded-full px-2 py-0.5 text-[11px] ring-1"
+            [ngClass]="{
+              'bg-green-50 text-green-700 ring-green-200': g.status === 'done',
+              'bg-amber-50 text-amber-700 ring-amber-200': g.status === 'overdue',
+              'bg-emerald-50 text-emerald-700 ring-emerald-200': g.status === 'active'
+            }">
+            {{ statusPt(g.status) }}
+          </span>
+        </div>
+
+        <!-- Linha de valores -->
+        <div class="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-gray-700">
+          <span class="inline-block h-2.5 w-2.5 rounded-full"
+                [ngClass]="{
+                  'bg-green-500': g.status === 'done',
+                  'bg-amber-500': g.status === 'overdue',
+                  'bg-emerald-500': g.status === 'active'
+                }">
+          </span>
+
+          <span class="font-medium text-emerald-900">
+            {{ (g.current_amount || 0) | currency:'BRL':'symbol-narrow':'1.0-0' }}
+          </span>
+          <span class="text-gray-500">/ {{ g.target_amount | currency:'BRL':'symbol-narrow':'1.0-0' }}</span>
+
+          <span *ngIf="g.due_date" class="text-xs text-gray-500">• até {{ g.due_date | date:'dd/MM/yyyy' }}</span>
+
+          <span class="ml-auto text-xs text-emerald-700"
+                *ngIf="progressGoal(g) as p">{{ p | number:'1.0-0' }}%</span>
+        </div>
+
+        <!-- Barra de progresso -->
+        <div class="mt-2 h-2.5 w-full overflow-hidden rounded-full bg-emerald-100/70"
+             role="progressbar"
+             [attr.aria-valuenow]="progressGoal(g) || 0" aria-valuemin="0" aria-valuemax="100">
+          <div
+            class="h-full rounded-full bg-gradient-to-r from-emerald-600 to-emerald-400 transition-[width] duration-300"
+            [style.width.%]="Math.max(progressGoal(g) || 0, (g.current_amount>0 ? 3 : 0))">
+          </div>
+        </div>
+
+        <div class="mt-1 text-[11px] text-gray-500">Lançamento rápido nesta meta</div>
+      </article>
+    </div>
+  </ng-container>
+
+  <ng-template #emptyGoals>
+    <div class="grid h-28 place-items-center text-sm text-gray-500">
+      Nenhuma meta ainda.
+      <button class="ml-1 underline" (click)="router.navigate(['/goals/new'])">Criar agora</button>
+    </div>
+  </ng-template>
+</div>
+
+<!-- ====== FIM METAS ====== -->
+
+      <!-- ====== FIM METAS ====== -->
+
       <!-- Charts -->
       <div class="grid gap-4 lg:grid-cols-2">
         <!-- Pizza por categoria -->
@@ -178,11 +274,19 @@ const brl = (v: number) =>
       </div>
     </div>
   `,
+  styles: [
+    `.goal-quick-form,
+.note-input,
+.btn-fixed {
+  all: unset; /* remove tudo */
+}`
+  ]
 })
 export class DashboardPageComponent implements OnInit, OnDestroy {
+  protected Math = Math; // Make Math available to the template
   monthInput = new Date().toISOString().slice(0, 7); // YYYY-MM
 
-  // Loading “leve” para UX (se quiser skeletons, dá pra ligar nele)
+  // Loading “leve”
   loading = signal(false);
   // expose brl helper to the template
   brl = brl;
@@ -261,7 +365,7 @@ export class DashboardPageComponent implements OnInit, OnDestroy {
       legend: { position: 'bottom' },
       tooltip: {
         callbacks: {
-          label: ctx => `${ctx.dataset.label}: ${brl(Number(ctx.parsed.y))}`
+          label: ctx => `${ctx.dataset.label}: ${brl(Number((ctx.parsed as any).y))}`
         }
       }
     },
@@ -273,29 +377,48 @@ export class DashboardPageComponent implements OnInit, OnDestroy {
 
   // realtime
   private ch?: RealtimeChannel;
+  private chGoals?: RealtimeChannel; // metas
+
+  // ====== ESTADO DE METAS ======
+  goals = signal<Goal[]>([]);
+  goalsLoading = signal(false);
+  quick: Record<string, { amount: number | null; note: string }> = {};
 
   constructor(
     private analytics: AnalyticsService,
     private budgets: BudgetsService,
     private cats: CategoriesService,
     private supa: SupabaseService,
+    private goalsSvc: GoalsService,         // + GoalsService
     public router: Router
-  ) {}
+  ) { }
 
   async ngOnInit() {
     await this.reload();
 
-    // realtime listener
+    // realtime listener transações
     this.ch = this.supa.client
       .channel('rt-transactions')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, async () => {
         await this.reload();
       })
       .subscribe();
+
+    // realtime metas + contribuições
+    this.chGoals = this.supa.client
+      .channel('rt-goals')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'goals' }, async () => {
+        await this.loadGoals();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'goal_contributions' }, async () => {
+        await this.loadGoals();
+      })
+      .subscribe();
   }
 
   ngOnDestroy() {
     if (this.ch) this.supa.client.removeChannel(this.ch);
+    if (this.chGoals) this.supa.client.removeChannel(this.chGoals);
   }
 
   async reload() {
@@ -326,9 +449,9 @@ export class DashboardPageComponent implements OnInit, OnDestroy {
       const data = cats.map((c: any) => Number(c.expense_total || 0));
       this.pieEmpty = data.every((v: number) => v === 0);
       const palette = [
-        'rgba(16,185,129,0.9)','rgba(5,150,105,0.9)','rgba(52,211,153,0.9)',
-        'rgba(2,132,199,0.9)','rgba(99,102,241,0.9)','rgba(234,179,8,0.9)',
-        'rgba(244,63,94,0.9)','rgba(59,130,246,0.9)'
+        'rgba(16,185,129,0.9)', 'rgba(5,150,105,0.9)', 'rgba(52,211,153,0.9)',
+        'rgba(2,132,199,0.9)', 'rgba(99,102,241,0.9)', 'rgba(234,179,8,0.9)',
+        'rgba(244,63,94,0.9)', 'rgba(59,130,246,0.9)'
       ];
 
       this.pieData = {
@@ -354,9 +477,49 @@ export class DashboardPageComponent implements OnInit, OnDestroy {
           { ...this.lineData.datasets[1], data: exp },
         ],
       };
+
+      // metas
+      await this.loadGoals();
     } finally {
       this.loading.set(false);
     }
+  }
+
+  // ==== METAS ====
+  async loadGoals() {
+    try {
+      this.goalsLoading.set(true);
+      const list = await this.goalsSvc.list();
+      // top 3 por % de progresso
+      const ranked = [...list].sort((a, b) => {
+        const pa = Number(a.current_amount) / Math.max(1, Number(a.target_amount));
+        const pb = Number(b.current_amount) / Math.max(1, Number(b.target_amount));
+        return pb - pa;
+      });
+      const top3 = ranked.slice(0, 3);
+      this.goals.set(top3);
+
+      // inicializa formulários rápidos
+      const map: Record<string, { amount: number | null; note: string }> = {};
+      for (const g of top3) map[g.id] = { amount: null, note: '' };
+      this.quick = map;
+    } finally {
+      this.goalsLoading.set(false);
+    }
+  }
+
+  async addQuick(g: Goal) {
+    const form = this.quick[g.id];
+    const amount = form?.amount ?? 0;
+    if (!amount || amount <= 0) return;
+
+    await this.goalsSvc.addContribution(g.id, amount, form?.note?.trim() || undefined);
+    await this.loadGoals();
+    this.quick[g.id] = { amount: null, note: '' };
+  }
+
+  progressGoal(g: Goal) {
+    return Math.min(100, Math.round((Number(g.current_amount) / Math.max(1, Number(g.target_amount))) * 100));
   }
 
   // ações rápidas
@@ -373,4 +536,12 @@ export class DashboardPageComponent implements OnInit, OnDestroy {
 
   // helpers para template
   brlNum(v: number) { return brl(v); }
+
+  statusPt(s: 'active' | 'done' | 'overdue'): string {
+    switch (s) {
+      case 'done': return 'concluída';
+      case 'overdue': return 'atrasada';
+      default: return 'ativa';
+    }
+  }
 }
