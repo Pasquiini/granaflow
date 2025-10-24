@@ -13,7 +13,7 @@ import { Router } from '@angular/router';
 
 // ======= NOVOS (Metas) =======
 import { GoalsService } from '../../../core/services/goals.service';
-import type { Goal } from '../../../core/models/goal.model';
+import type { Goal, GoalStatus } from '../../../core/models/goal.model';
 import { CurrencyMaskDirective } from '../../../shared/directives/currency-mask.directive';
 
 // Util BRL rápido p/ tooltips
@@ -537,11 +537,12 @@ export class DashboardPageComponent implements OnInit, OnDestroy {
   // helpers para template
   brlNum(v: number) { return brl(v); }
 
-  statusPt(s: 'active' | 'done' | 'overdue'): string {
-    switch (s) {
-      case 'done': return 'concluída';
-      case 'overdue': return 'atrasada';
-      default: return 'ativa';
+  statusPt(status: GoalStatus): string {
+    switch (status) {
+      case 'active': return 'Ativa';
+      case 'paused': return 'Pausada';
+      case 'done': return 'Concluída';
+      case 'overdue': return 'Atrasada';
     }
   }
 }

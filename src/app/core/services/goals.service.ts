@@ -1,7 +1,8 @@
 import { Injectable } from '@angular/core';
 import { SupabaseService } from './supabase.service';
 import type { Goal } from '../models/goal.model';
-import type { GoalContribution } from '../models/goal-contribution.model';
+
+export type GoalStatus = 'active' | 'paused' | 'done' | 'overdue';
 
 @Injectable({ providedIn: 'root' })
 export class GoalsService {
@@ -10,6 +11,11 @@ export class GoalsService {
   private get client() {
     return this.supabase.client;
   }
+
+  // -----------------------------
+  // GOALS
+  // -----------------------------
+
   async list(): Promise<Goal[]> {
     const { data, error } = await this.client
       .from('goals')
@@ -50,12 +56,29 @@ export class GoalsService {
     return data as Goal;
   }
 
+  // Excluir (mantém o original e um alias para conveniência)
   async remove(id: string): Promise<void> {
-    const { error } = await this.client
-      .from('goals')
-      .delete()
-      .eq('id', id);
+    const { error } = await this.client.from('goals').delete().eq('id', id);
     if (error) throw error;
+  }
+  async delete(id: string): Promise<void> {
+    return this.remove(id);
+  }
+
+  // -----------------------------
+  // STATUS (pausar / retomar)
+  // -----------------------------
+
+  async setStatus(id: string, status: GoalStatus): Promise<Goal> {
+    return this.update(id, { status });
+  }
+
+  async pause(id: string): Promise<Goal> {
+    return this.setStatus(id, 'paused');
+  }
+
+  async resume(id: string): Promise<Goal> {
+    return this.setStatus(id, 'active');
   }
 
   // -----------------------------
@@ -66,23 +89,23 @@ export class GoalsService {
     goalId: string,
     amount: number,
     note?: string
-  ): Promise<GoalContribution> {
+  ) {
     const { data, error } = await this.client
       .from('goal_contributions')
       .insert({ goal_id: goalId, amount, note })
       .select('*')
       .single();
     if (error) throw error;
-    return data as GoalContribution;
+    return data as any; // ou GoalContribution se já tipado
   }
 
-  async listContributions(goalId: string): Promise<GoalContribution[]> {
+  async listContributions(goalId: string) {
     const { data, error } = await this.client
       .from('goal_contributions')
       .select('*')
       .eq('goal_id', goalId)
       .order('created_at', { ascending: false });
     if (error) throw error;
-    return data as GoalContribution[];
+    return data as any[]; // ou GoalContribution[]
   }
 }
